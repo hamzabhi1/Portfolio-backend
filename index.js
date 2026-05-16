@@ -10,12 +10,21 @@ dotenv.config();
 
 const app = express();
 
-// middleware
+/* =========================
+   CONNECT DATABASE
+========================= */
+connectDB();
+
+/* =========================
+   MIDDLEWARE
+========================= */
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // ✅ extra safety
+app.use(express.urlencoded({ extended: true }));
 
-// static uploads
+/* =========================
+   STATIC FOLDER
+========================= */
 app.use("/uploads", express.static("uploads"));
 
 /* =========================
@@ -37,14 +46,6 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
-    // ✅ FIX: correct env variable names
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      return res.status(500).json({
-        success: false,
-        message: "Missing EMAIL_USER or EMAIL_PASS in .env",
-      });
-    }
-
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -56,47 +57,34 @@ app.post("/api/contact", async (req, res) => {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: process.env.EMAIL_USER,
-      subject: `📩 New Message from ${name}`,
+      subject: `New Message From ${name}`,
       html: `
         <h2>New Contact Message</h2>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p><b>Message:</b><br/>${message}</p>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong><br/>${message}</p>
       `,
     });
 
-    return res.json({
+    res.status(200).json({
       success: true,
-      message: "Message sent successfully ✅",
+      message: "Message Sent Successfully",
     });
 
   } catch (error) {
-    console.log("CONTACT ERROR:", error);
-
-    return res.status(500).json({
+    console.log(error);
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server Error",
     });
   }
 });
 
 /* =========================
-   START SERVER SAFELY
+   HOME ROUTE
 ========================= */
-const startServer = async () => {
-  try {
-    await connectDB();
+app.get("/", (req, res) => {
+  res.send("API Running Successfully");
+});
 
-    const PORT = process.env.PORT || 5000;
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-
-  } catch (error) {
-    console.log("❌ SERVER FAILED TO START:", error.message);
-    process.exit(1);
-  }
-};
-
-startServer();
+export default app;
