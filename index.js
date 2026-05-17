@@ -18,7 +18,16 @@ connectDB();
 /* =========================
    MIDDLEWARE
 ========================= */
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://portfolio-frontend-psi-gray.vercel.app",
+    ],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -73,6 +82,7 @@ app.post("/api/contact", async (req, res) => {
 
   } catch (error) {
     console.log(error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
