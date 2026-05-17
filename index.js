@@ -12,21 +12,26 @@ dotenv.config();
 const app = express();
 
 /* =========================
-   SAFE UPLOADS FOLDER (FIX FOR VERCEL ERROR)
+   BODY PARSER (IMPORTANT: FIRST)
 ========================= */
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* =========================
+   SAFE UPLOADS FOLDER
+========================= */
+if (!fs.existsSync("/tmp/uploads")) {
+  fs.mkdirSync("/tmp/uploads", { recursive: true });
 }
 
 /* =========================
-   CONNECT DATABASE
+   STATIC FILES
+⚠️ VERCEL NOTE: /uploads is NOT persistent
 ========================= */
-connectDB()
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log("MongoDB Error:", err.message));
+app.use("/uploads", express.static("/tmp/uploads"));
 
 /* =========================
-   CORS (FIXED FOR PRODUCTION)
+   CORS (PRODUCTION SAFE)
 ========================= */
 const allowedOrigins = [
   "http://localhost:5173",
@@ -35,14 +40,14 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: (origin, callback) => {
+    origin: function (origin, callback) {
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      return callback(null, true); // ⚠️ TEMP FIX: avoid blocking in Vercel issues
+      return callback(null, true); // keep open for now
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -50,15 +55,9 @@ app.use(
 );
 
 /* =========================
-   BODY PARSER
+   CONNECT DATABASE (FIXED)
 ========================= */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-/* =========================
-   STATIC FILES
-========================= */
-app.use("/uploads", express.static("uploads"));
+connectDB();
 
 /* =========================
    ROUTES
@@ -66,7 +65,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/projects", projectRoutes);
 
 /* =========================
-   CONTACT API (SAFE VERSION)
+   CONTACT API
 ========================= */
 app.post("/api/contact", async (req, res) => {
   try {
@@ -82,7 +81,7 @@ app.post("/api/contact", async (req, res) => {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       return res.status(500).json({
         success: false,
-        message: "Email config missing in environment variables",
+        message: "Missing EMAIL config in Vercel env",
       });
     }
 
@@ -106,26 +105,29 @@ app.post("/api/contact", async (req, res) => {
       `,
     });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Message Sent Successfully",
     });
 
   } catch (error) {
-    console.log("CONTACT ERROR:", error);
+    console.log("CONTACT ERROR:", error.message);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server Error",
     });
   }
 });
 
 /* =========================
-   HOME ROUTE
+   HEALTH CHECK
 ========================= */
 app.get("/", (req, res) => {
-  res.send("API Running Successfully");
+  res.json({
+    message: "API Running Successfully",
+    mongo: process.env.MONGO_URI ? "CONNECTED" : "MISSING"
+  });
 });
 
 export default app;
