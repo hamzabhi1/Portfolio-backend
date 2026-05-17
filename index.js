@@ -16,41 +16,32 @@ const app = express();
 connectDB();
 
 /* =========================
-   CORS OPTIONS
+   CORS (FIXED FOR VERCEL)
 ========================= */
 const allowedOrigins = [
   "http://localhost:5173",
   "https://portfolio-frontend-psi-gray.vercel.app",
 ];
 
-/* =========================
-   MIDDLEWARE
-========================= */
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS Not Allowed"));
-      }
-    },
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
-// Handle preflight requests
+/* IMPORTANT: preflight fix */
 app.options("*", cors());
 
+/* =========================
+   BODY PARSER
+========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =========================
-   STATIC FOLDER
+   STATIC FILES
 ========================= */
 app.use("/uploads", express.static("uploads"));
 
@@ -73,6 +64,13 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(500).json({
+        success: false,
+        message: "Email config missing in .env",
+      });
+    }
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -87,23 +85,22 @@ app.post("/api/contact", async (req, res) => {
       subject: `New Message From ${name}`,
       html: `
         <h2>New Contact Message</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Message:</strong><br/>${message}</p>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Message:</b> ${message}</p>
       `,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Message Sent Successfully",
     });
-
   } catch (error) {
     console.log("CONTACT ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message,
     });
   }
 });
