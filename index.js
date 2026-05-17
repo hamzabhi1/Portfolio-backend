@@ -18,27 +18,20 @@ connectDB();
 /* =========================
    CORS (FIXED FOR VERCEL)
 ========================= */
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://portfolio-frontend-psi-gray.vercel.app",
-];
-
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: [
+      "http://localhost:5173",
+      "https://portfolio-frontend-psi-gray.vercel.app",
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
-/* IMPORTANT: preflight fix */
-app.options("*", cors());
-
-/* =========================
-   BODY PARSER
-========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 /* =========================
    STATIC FILES
