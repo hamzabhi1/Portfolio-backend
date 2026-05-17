@@ -1,10 +1,10 @@
 import multer from "multer";
 import path from "path";
 
-// STORAGE CONFIG
+// TEMP STORAGE FOR VERCEL
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    cb(null, "/tmp");
   },
 
   filename: function (req, file, cb) {
@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
   }
 });
 
-// FILE FILTER (only images)
+// FILE FILTER
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
