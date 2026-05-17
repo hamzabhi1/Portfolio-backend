@@ -13,25 +13,40 @@ const app = express();
 /* =========================
    CONNECT DATABASE
 ========================= */
-connectDB();
+connectDB()
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.log("MongoDB Error:", err.message));
 
 /* =========================
-   CORS (FIXED FOR VERCEL)
+   CORS
 ========================= */
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://portfolio-frontend-psi-gray.vercel.app",
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://portfolio-frontend-psi-gray.vercel.app",
-    ],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
 
+/* =========================
+   BODY PARSER
+========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 /* =========================
    STATIC FILES
@@ -48,6 +63,8 @@ app.use("/api/projects", projectRoutes);
 ========================= */
 app.post("/api/contact", async (req, res) => {
   try {
+    console.log("BODY:", req.body);
+
     const { name, email, message } = req.body;
 
     if (!name || !email || !message) {
@@ -57,12 +74,7 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      return res.status(500).json({
-        success: false,
-        message: "Email config missing in .env",
-      });
-    }
+    console.log("EMAIL USER:", process.env.EMAIL_USER);
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -71,6 +83,8 @@ app.post("/api/contact", async (req, res) => {
         pass: process.env.EMAIL_PASS,
       },
     });
+
+    await transporter.verify();
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -88,12 +102,14 @@ app.post("/api/contact", async (req, res) => {
       success: true,
       message: "Message Sent Successfully",
     });
+
   } catch (error) {
-    console.log("CONTACT ERROR:", error);
+    console.log("CONTACT ERROR FULL:", error);
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      error: error.message,
+      stack: error.stack,
     });
   }
 });
